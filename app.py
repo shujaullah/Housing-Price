@@ -1,46 +1,114 @@
 import streamlit as st
 import pandas as pd
-import joblib
 import numpy as np
+import joblib
+import os
 
-# Load trained model and feature list
-model = joblib.load(r"model-training/best_model.pkl")
-expected_cols = joblib.load("feature_columns.pkl")
+# --- Load Trained Model ---
+model = joblib.load(os.path.join("SML PROJECT", "best_model.pkl"))
 
-# Get feature importances
-feature_importances = model.feature_importances_
-importances = pd.Series(feature_importances, index=model.feature_names_in_)
-top_5_features = importances.nlargest(5).index.tolist()
-# Print feature importances
-st.write("Feature Importances:")
-for feature, importance in importances.nlargest(5).items():
-    st.write(f"{feature}: {importance:.4f}")
-# Define feature configuration for the top 5 features
-feature_config = {
-    feature: {'min': 0, 'max': 100} for feature in top_5_features
+# --- Load Raw, Unencoded Training Data ---
+X_train = pd.read_csv(r"pre-process-data\train.csv")  # Ensure this is raw data before encoding or transformation
+
+# --- Feature Definitions ---
+numerical_features = ['LotArea', 'LotFrontage']
+categorical_features = ['MSZoning', 'Street']
+top_5_features = ['LotArea', 'MSSubClass', 'LotFrontage', 'MSZoning', 'Street']
+
+# --- Building Class Dropdown Mapping ---
+building_class_map = {
+    "1-Story Single Family (All Ages)": 20,
+    "1-Story Attached (All Ages)": 30,
+    "1-Story w/ Finished Attic (All Ages)": 40,
+    "1-1/2 Story - Unfinished All Ages": 45,
+    "1-1/2 Story - Finished All Ages": 50,
+    "2-Story 1946 & Newer": 60,
+    "2-Story 1945 & Older": 70,
+    "2-1/2 Story All Ages": 75,
+    "Split or Multi-Level": 80,
+    "Split Foyer": 85,
+    "Duplex": 90,
+    "1-Story PUD": 120,
+    "1-1/2 Story PUD": 150,
+    "2-Story PUD": 160,
+    "PUD - Multi-Level": 180,
+    "Two-family Conversion, Multi-Family": 190
 }
 
-# Create Streamlit UI
-st.title('Prediction App')
-st.write('Enter values for the top 5 most important features:')
+# --- Encodings Used in Training ---
+mszoning_map = {'C (all)': 0, 'FV': 1, 'RH': 2, 'RL': 3, 'RM': 4}
+street_map = {'Grvl': 0, 'Pave': 1}
 
-# Create input fields for features
+# --- Descriptive Labels ---
+feature_labels = {
+    'LotArea': "Lot Area (in Sq. Ft.)",
+    'LotFrontage': "Lot Frontage (in Ft.)",
+    'MSSubClass': "Building Class (MSSubClass)",
+    'MSZoning': "Zoning Classification (MSZoning)",
+    'Street': "Road Type (Street)"
+}
+
+# --- UI Setup ---
+st.set_page_config(page_title="House Price Predictor", layout="centered")
+st.title("🏠 House Price Prediction App")
+st.markdown("Enter the house details below:")
+
 user_input = {}
-for feature in top_5_features:
-    user_input[feature] = st.slider(
-        feature,
-        min_value=float(feature_config[feature]['min']),
-        max_value=float(feature_config[feature]['max']),
-        value=float((feature_config[feature]['min'] + feature_config[feature]['max']) / 2)
+
+# --- Manual Number Inputs for Numerical Features ---
+for feature in numerical_features:
+    min_val = float(X_train[feature].min())
+    max_val = float(X_train[feature].max())
+    user_input[feature] = st.number_input(
+        label=feature_labels[feature],
+        min_value=min_val,
+        max_value=max_val,
+        value=min_val,
+        step=0.5,
+        format="%.2f"
     )
 
-# Add predict button
-if st.button('Predict'):
-    # Create input array
-    input_data = pd.DataFrame([user_input])
-    
+# --- Building Class Dropdown ---
+user_input['MSSubClass'] = st.selectbox(
+    label=feature_labels['MSSubClass'],
+    options=list(building_class_map.keys())
+)
+
+# --- Categorical Dropdowns ---
+user_input['MSZoning'] = st.selectbox(
+    label=feature_labels['MSZoning'],
+    options=list(mszoning_map.keys())
+)
+
+user_input['Street'] = st.selectbox(
+    label=feature_labels['Street'],
+    options=list(street_map.keys())
+)
+
+# --- Prediction Button ---
+if st.button("🔍 Predict Price"):
+    # Convert to DataFrame
+    input_df = pd.DataFrame([user_input])
+
+    # Convert Building Class to numeric
+    input_df['MSSubClass'] = input_df['MSSubClass'].map(building_class_map)
+
+    # Log-transform numerical inputs
+    for feature in numerical_features:
+        input_df[feature] = np.log1p(input_df[feature])
+
+    # Encode categorical inputs
+    input_df['MSZoning'] = input_df['MSZoning'].map(mszoning_map)
+    input_df['Street'] = input_df['Street'].map(street_map)
+
+    # Ensure correct column order
+    input_df = input_df[top_5_features]
+
     # Make prediction
-    prediction = model.predict(input_data)
-    
+    log_price_prediction = model.predict(input_df)[0]
+    predicted_price = np.expm1(log_price_prediction)
+
     # Display result
-    st.write(f'Prediction: {prediction[0]}')
+    st.markdown("---")
+    st.markdown("### 💰 Predicted House Price:")
+    st.markdown(f"## :green[{predicted_price:,.2f} USD]")
