@@ -5,7 +5,7 @@ import joblib
 import os
 
 # --- Load Trained Model ---
-model = joblib.load("SML PROJECT/best_model.pkl")
+model = joblib.load("best_model.pkl")
 
 # --- Load Raw, Unencoded Training Data ---
 X_train = pd.read_csv(r"pre-process-data\train.csv")  # Ensure this is raw data before encoding or transformation
