@@ -5,10 +5,11 @@ import joblib
 import os
 
 # --- Load Trained Model ---
-model = joblib.load(os.path.join("SML PROJECT", "best_model.pkl"))
+model = joblib.load(os.path.join("model-training", "best_model.pkl"))
 
 # --- Load Raw, Unencoded Training Data ---
-X_train = pd.read_csv(r"pre-process-data\train.csv")  # Ensure this is raw data before encoding or transformation
+# Ensure this is raw data before encoding or transformation
+X_train = pd.read_csv(r"pre-process-data\train.csv")
 
 # --- Feature Definitions ---
 numerical_features = ['LotArea', 'LotFrontage']
