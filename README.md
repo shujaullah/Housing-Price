@@ -130,12 +130,9 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## Acknowledgments
 
-- Dataset source
-- Contributors
-- References
+- Dataset source https://www.kaggle.com/competitions/house-prices-advanced-regression-techniques
 
 ## Contact
 
-Your Name - your.email@example.com
+Your Name - ahsan.s@northeastern.edu, sudharsan.s@northeastern.edu, ingale.p@northeastern.edu
 
-Project Link: [https://github.com/your-username/housing-price-prediction](https://github.com/your-username/housing-price-prediction)
